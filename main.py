@@ -91,7 +91,6 @@ def monitor_window(hwnd):
             is_pressed = False
             is_rapid_clicking = False  # 新增：标记是否在连点模式
             rapid_click_count = 0      # 连点计数器，用于控制日志频率
-            debug_screenshot_saved = False  # debug截图是否已保存
             cycle_active = True
             blue_check_enable = True
             # 新增：A/D 触发状态记录（用于边沿触发日志与锁定切换）
@@ -117,30 +116,48 @@ def monitor_window(hwnd):
                     white = is_white_dominant(roi, threshold=0.2)
 
                 if not red and white:
+                    # 在整个收鱼过程中持续检测红白色
+                    reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
+                    reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
+                    has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                    
                     if not is_pressed and not is_rapid_clicking:
-                        # 检测收鱼线区域是否有红色出现
-                        reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
-                        reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
-                        
-                        has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
-                        log(f"收鱼线区域红白检测：{reel_center} ({reel_size}x{reel_size}) -> {'有红色或白色' if has_red_or_white else '无红色或白色'}")
-                        
+                        # 初始状态：根据检测结果选择模式
                         if has_red_or_white:
-                            # 如果检测到红色或白色，使用连点模式
                             log("【启动连点模式】检测到收鱼线区域红色或白色，开始鼠标连点收线")
+                            save_debug_detection_image(full_img, reel_center, reel_size, True)
                             is_rapid_clicking = True
                             rapid_click_count = 0
                         else:
-                            # 没有红色或白色，使用原来的长按模式
                             log("【启动长按模式】未检测到红色或白色，使用传统长按收线")
+                            save_debug_detection_image(full_img, reel_center, reel_size, False)
                             press_mouse_window(hwnd, *CLICK_POS)
                             is_pressed = True
                     elif is_rapid_clicking:
-                        # 持续连点模式
-                        rapid_click_count += 1
-                        if rapid_click_count % 20 == 1:  # 每20次连点输出一次日志
-                            log(f"【连点进行中】第{rapid_click_count}次连点...")
-                        rapid_click_mouse_window(hwnd, *CLICK_POS)
+                        # 连点模式：检测是否需要切换到长按模式
+                        if has_red_or_white:
+                            # 继续连点模式
+                            rapid_click_count += 1
+                            if rapid_click_count % 20 == 1:
+                                log(f"【连点进行中】第{rapid_click_count}次连点...")
+                            rapid_click_mouse_window(hwnd, *CLICK_POS)
+                        else:
+                            # 切换到长按模式
+                            log(f"【切换到长按模式】未检测到红白色，从连点({rapid_click_count}次)切换到长按")
+                            is_rapid_clicking = False
+                            rapid_click_count = 0
+                            press_mouse_window(hwnd, *CLICK_POS)
+                            is_pressed = True
+                    elif is_pressed:
+                        # 长按模式：检测是否需要切换到连点模式
+                        if has_red_or_white:
+                            # 切换到连点模式
+                            log("【切换到连点模式】检测到红白色，从长按切换到连点")
+                            release_mouse()
+                            is_pressed = False
+                            is_rapid_clicking = True
+                            rapid_click_count = 0
+                        # 继续长按（不需要额外操作）
                 else:
                     red_start_time = None
                     # 重置连点状态
@@ -150,7 +167,36 @@ def monitor_window(hwnd):
                         rapid_click_count = 0
 
                 # ------- A/D互斥长按逻辑（新版：左右红橙色检测，锁定-切换） -------
-                if is_pressed:
+                if is_pressed or is_rapid_clicking:
+                    # 在遛鱼过程中持续检测红白色并切换模式
+                    reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
+                    reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
+                    has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                    
+                    # 处理模式切换
+                    if is_pressed and has_red_or_white:
+                        # 从长按模式切换到连点模式
+                        log("【遛鱼中切换到连点模式】检测到红白色，从长按切换到连点")
+                        release_mouse()
+                        is_pressed = False
+                        is_rapid_clicking = True
+                        rapid_click_count = 0
+                        save_debug_detection_image(full_img, reel_center, reel_size, True)
+                    elif is_rapid_clicking and not has_red_or_white:
+                        # 从连点模式切换到长按模式
+                        log(f"【遛鱼中切换到长按模式】未检测到红白色，从连点({rapid_click_count}次)切换到长按")
+                        is_rapid_clicking = False
+                        rapid_click_count = 0
+                        press_mouse_window(hwnd, *CLICK_POS)
+                        is_pressed = True
+                        save_debug_detection_image(full_img, reel_center, reel_size, False)
+                    elif is_rapid_clicking and has_red_or_white:
+                        # 继续连点模式
+                        rapid_click_count += 1
+                        if rapid_click_count % 20 == 1:
+                            log(f"【遛鱼连点中】第{rapid_click_count}次连点...")
+                        rapid_click_mouse_window(hwnd, *CLICK_POS)
+                    
                     # 计算 A/D 检测方框（按分辨率缩放）
                     a_cx, a_cy = get_scale_point(AD_A_CENTER, width, height)
                     d_cx, d_cy = get_scale_point(AD_D_CENTER, width, height)
@@ -180,24 +226,8 @@ def monitor_window(hwnd):
                     # 触发边沿日志（避免每帧刷屏）
                     if a_hot and not ad_prev_hot["a"]:
                         log("A判定触发（红橙色命中）")
-                        # 第一次A或D触发时保存debug截图
-                        if not debug_screenshot_saved:
-                            reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
-                            reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
-                            has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
-                            save_debug_detection_image(full_img, reel_center, reel_size, has_red_or_white)
-                            debug_screenshot_saved = True
-                            log("A触发时保存了debug截图")
                     if d_hot and not ad_prev_hot["d"]:
                         log("D判定触发（红橙色命中）")
-                        # 第一次A或D触发时保存debug截图
-                        if not debug_screenshot_saved:
-                            reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
-                            reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
-                            has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
-                            save_debug_detection_image(full_img, reel_center, reel_size, has_red_or_white)
-                            debug_screenshot_saved = True
-                            log("D触发时保存了debug截图")
                     ad_prev_hot["a"] = a_hot
                     ad_prev_hot["d"] = d_hot
 
@@ -244,6 +274,8 @@ def monitor_window(hwnd):
                             log(f"【钓鱼完成，退出连点模式】共连点{rapid_click_count}次")
                             is_rapid_clicking = False  # 重置连点状态
                             rapid_click_count = 0
+                        else:
+                            log("【钓鱼完成，退出长按模式】")
                         blue_check_enable = False
                         # ===== 这里是新加的配置延迟 =====
                         time.sleep(AFTER_DETECT_CLICK_DELAY)
