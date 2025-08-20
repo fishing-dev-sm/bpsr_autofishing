@@ -144,3 +144,63 @@ def region_rect_major_color(img, rect, color_list, tolerance=20, ratio=0.5):
         return False
     proportion = match_cnt / total_cnt
     return proportion >= ratio
+
+def has_broad_red_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_THRESHOLD):
+    """
+    检测指定区域内是否有宽泛的红色出现
+    
+    参数:
+        img: 截图图像（BGR格式）
+        center: 检测区域中心坐标 (x, y)
+        size: 检测区域边长（正方形）
+        ratio_threshold: 红色像素占比阈值
+    
+    返回:
+        bool: 是否检测到足够比例的红色
+    """
+    if img is None or img.size == 0:
+        return False
+    
+    h, w = img.shape[:2]
+    cx, cy = center
+    half_size = size // 2
+    
+    # 计算检测区域边界，确保不超出图像范围
+    x1 = max(0, int(cx - half_size))
+    y1 = max(0, int(cy - half_size))
+    x2 = min(w, int(cx + half_size))
+    y2 = min(h, int(cy + half_size))
+    
+    # 提取ROI
+    roi = img[y1:y2, x1:x2]
+    if roi.size == 0:
+        return False
+    
+    # 转换为HSV色彩空间进行红色检测
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    
+    # 定义红色的HSV范围（宽泛检测，包含红橙色）
+    # 红色有两个范围：0-10度和160-180度
+    lower_red1 = np.array([0, 50, 50])      # 降低饱和度和明度阈值，更宽泛
+    upper_red1 = np.array([10, 255, 255])
+    lower_red2 = np.array([160, 50, 50])
+    upper_red2 = np.array([180, 255, 255])
+    
+    # 橙红色范围（10-25度）
+    lower_orange = np.array([10, 50, 50])
+    upper_orange = np.array([25, 255, 255])
+    
+    # 创建掩码
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask3 = cv2.inRange(hsv, lower_orange, upper_orange)
+    
+    # 合并所有掩码
+    combined_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask3)
+    
+    # 计算红色像素比例
+    red_pixels = cv2.countNonZero(combined_mask)
+    total_pixels = roi.shape[0] * roi.shape[1]
+    red_ratio = red_pixels / total_pixels
+    
+    return red_ratio >= ratio_threshold

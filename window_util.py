@@ -84,6 +84,27 @@ def click_mouse_window(hwnd, rel_x, rel_y):
     ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
     log(f"鼠标左键单击完成（窗口内: {rel_x},{rel_y} | 屏幕: {abs_x},{abs_y}）")
 
+def rapid_click_mouse_window(hwnd, rel_x, rel_y, interval=REEL_CLICK_INTERVAL):
+    """
+    鼠标连点函数，在指定位置快速连续点击
+    
+    参数:
+        hwnd: 窗口句柄
+        rel_x, rel_y: 窗口内相对坐标
+        interval: 点击间隔（秒）
+    """
+    client_rect = get_client_rect(hwnd)
+    abs_x = client_rect[0] + rel_x
+    abs_y = client_rect[1] + rel_y
+    ctypes.windll.user32.SetCursorPos(abs_x, abs_y)
+    
+    # 快速连点
+    ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+    import time
+    time.sleep(interval)
+    ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+    log(f"鼠标连点（窗口内: {rel_x},{rel_y} | 屏幕: {abs_x},{abs_y}）")
+
 def get_search_region(center, offset):
     """
     根据中心点和偏移量计算搜索矩形区域。
