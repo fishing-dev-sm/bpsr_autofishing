@@ -179,24 +179,32 @@ def has_broad_red_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_TH
     # 转换为HSV色彩空间进行红色检测
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     
-    # 定义红色的HSV范围（宽泛检测，包含红橙色）
-    # 红色有两个范围：0-10度和160-180度
-    lower_red1 = np.array([0, 50, 50])      # 降低饱和度和明度阈值，更宽泛
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 50, 50])
+    # 定义红色的HSV范围（极宽泛检测，包含各种红色变化）
+    # 红色范围1：0-15度（扩大覆盖偏橙红色）
+    lower_red1 = np.array([0, 30, 30])      # 进一步降低饱和度和明度阈值
+    upper_red1 = np.array([15, 255, 255])   # 扩大色相范围
+    
+    # 红色范围2：150-180度（扩大覆盖偏紫红色）
+    lower_red2 = np.array([150, 30, 30])    # 扩大色相范围，降低阈值
     upper_red2 = np.array([180, 255, 255])
     
-    # 橙红色范围（10-25度）
-    lower_orange = np.array([10, 50, 50])
-    upper_orange = np.array([25, 255, 255])
+    # 橙红色范围（15-35度，扩大范围）
+    lower_orange = np.array([15, 30, 30])
+    upper_orange = np.array([35, 255, 255])
+    
+    # 粉红色范围（可能的红色变化）
+    lower_pink = np.array([140, 30, 30])
+    upper_pink = np.array([170, 255, 255])
     
     # 创建掩码
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask3 = cv2.inRange(hsv, lower_orange, upper_orange)
+    mask4 = cv2.inRange(hsv, lower_pink, upper_pink)
     
     # 合并所有掩码
-    combined_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask3)
+    temp_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask3)
+    combined_mask = cv2.bitwise_or(temp_mask, mask4)
     
     # 计算红色像素比例
     red_pixels = cv2.countNonZero(combined_mask)
@@ -206,5 +214,6 @@ def has_broad_red_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_TH
     # 详细的检测日志
     result = red_ratio >= ratio_threshold
     log(f"红色检测详情：区域{roi.shape} 红色像素{red_pixels}/{total_pixels} 比例{red_ratio:.3f} 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
+    log(f"扩展检测范围：红色(0-15°,150-180°) 橙色(15-35°) 粉红(140-170°) 饱和度≥30 明度≥30")
     
     return result

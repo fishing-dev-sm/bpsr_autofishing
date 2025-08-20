@@ -88,6 +88,6 @@ AFTER_DETECT_CLICK_DELAY = 1    # 检测到钓鱼完成后到点击SECOND_CLICK_
 
 # ====== 收鱼线红色检测参数 ======
 REEL_RED_CHECK_CENTER = (1156.898, 540)    # 收鱼线红色检测区域中心（基于1920x1080）
-REEL_RED_CHECK_SIZE = 30                    # 检测区域大小（30x30像素）
-REEL_RED_RATIO_THRESHOLD = 0.05             # 红色像素占比阈值（宽泛检测）
+REEL_RED_CHECK_SIZE = 60                    # 检测区域大小（60x60像素）
+REEL_RED_RATIO_THRESHOLD = 0.03             # 红色像素占比阈值（更宽泛检测）
 REEL_CLICK_INTERVAL = 0.05                  # 鼠标连点间隔（秒）
