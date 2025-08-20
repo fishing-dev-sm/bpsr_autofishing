@@ -91,6 +91,7 @@ def monitor_window(hwnd):
             is_pressed = False
             is_rapid_clicking = False  # 新增：标记是否在连点模式
             rapid_click_count = 0      # 连点计数器，用于控制日志频率
+            debug_screenshot_saved = False  # debug截图是否已保存
             cycle_active = True
             blue_check_enable = True
             # 新增：A/D 触发状态记录（用于边沿触发日志与锁定切换）
@@ -179,8 +180,24 @@ def monitor_window(hwnd):
                     # 触发边沿日志（避免每帧刷屏）
                     if a_hot and not ad_prev_hot["a"]:
                         log("A判定触发（红橙色命中）")
+                        # 第一次A或D触发时保存debug截图
+                        if not debug_screenshot_saved:
+                            reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
+                            reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
+                            has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                            save_debug_detection_image(full_img, reel_center, reel_size, has_red_or_white)
+                            debug_screenshot_saved = True
+                            log("A触发时保存了debug截图")
                     if d_hot and not ad_prev_hot["d"]:
                         log("D判定触发（红橙色命中）")
+                        # 第一次A或D触发时保存debug截图
+                        if not debug_screenshot_saved:
+                            reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
+                            reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
+                            has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                            save_debug_detection_image(full_img, reel_center, reel_size, has_red_or_white)
+                            debug_screenshot_saved = True
+                            log("D触发时保存了debug截图")
                     ad_prev_hot["a"] = a_hot
                     ad_prev_hot["d"] = d_hot
 

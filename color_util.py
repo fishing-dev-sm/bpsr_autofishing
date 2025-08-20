@@ -237,8 +237,16 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     # 合并红色掩码
     red_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask3)
     
-    # 白色检测 - 在BGR色彩空间中检测高亮度像素
-    white_mask = np.all(roi > 200, axis=2).astype(np.uint8) * 255  # 所有通道都大于200被认为是白色
+    # 白色检测 - 使用多种方法检测白色
+    # 方法1：BGR色彩空间，所有通道都高
+    white_bgr = np.all(roi > 180, axis=2)
+    
+    # 方法2：HSV色彩空间，低饱和度高明度（更准确的白色检测）
+    white_hsv_mask = cv2.inRange(hsv, np.array([0, 0, 180]), np.array([180, 50, 255]))
+    
+    # 合并两种白色检测方法
+    white_condition = np.logical_or(white_bgr, white_hsv_mask > 0)
+    white_mask = white_condition.astype(np.uint8) * 255
     
     # 合并红色和白色掩码
     combined_mask = cv2.bitwise_or(red_mask, white_mask)
@@ -256,8 +264,5 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     # 详细的检测日志
     result = combined_ratio >= ratio_threshold
     log(f"红白检测详情：区域{roi.shape} 红色{red_pixels}({red_ratio:.3f}) 白色{white_pixels}({white_ratio:.3f}) 总计{total_red_white_pixels}/{total_pixels}({combined_ratio:.3f}) 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
-    
-    # 保存debug截图
-    save_debug_detection_image(img, center, size, result)
     
     return result
