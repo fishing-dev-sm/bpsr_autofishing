@@ -19,14 +19,13 @@
 - 会话统计：程序结束打印时间区间、成功率、单位时间效率（成功/分钟、成功/小时）。
 
 ### 目录结构
-- `auto_fish/`
-  - `main.py`：主循环与整体流程
-  - `config.py`：所有可调坐标/阈值/延迟配置
-  - `color_util.py`：颜色相关识别（红/白/蓝绿、红橙检测）
-  - `window_util.py`：窗口/截图/坐标缩放、辅助函数
-  - `game_logic.py`：自动换竿逻辑
-  - `assets/`：模板图片
-  - `钓鱼流程分析.md`：流程与判定的中文说明文档
+- `main.py`：主循环与整体流程
+- `config.py`：所有可调坐标/阈值/延迟配置
+- `color_util.py`：颜色相关识别（红/白/蓝绿、红橙检测）
+- `window_util.py`：窗口/截图/坐标缩放、辅助函数
+- `game_logic.py`：自动换竿逻辑
+- `assets/`：模板图片
+- `钓鱼流程分析.md`：流程与判定的中文说明文档
 
 ### 环境与依赖
 - 平台：Windows（使用 `win32gui`、`pygetwindow`、`ctypes.windll` 等）
@@ -34,7 +33,7 @@
 - 依赖安装：
 
 ```bash
-pip install -r auto_fish/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 快速开始
@@ -42,12 +41,12 @@ pip install -r auto_fish/requirements.txt
 2. 运行脚本：
 
 ```bash
-python auto_fish/main.py
+python main.py
 ```
 
 3. 程序会自动聚焦到目标窗口并开始循环；按 `Esc`/`~`/`Q`/`Ctrl` 任意键可退出。
 
-### 关键配置（`auto_fish/config.py`）
+### 关键配置（`config.py`）
 - 进程名：`PROCESS_NAME`（默认 `Star.exe`）
 - 甩钩/收尾：`CLICK_POS`、`SECOND_CLICK_POS`、`START_DELAY`、`AFTER_SECOND_CLICK_DELAY`、`AFTER_DETECT_CLICK_DELAY`
 - 红点搜索：`RED_SEARCH_REGION_CENTER`、`RED_SEARCH_REGION_OFFSET`、`RED_DETECT_BOX_SIZE`、`RED_THRESHOLD`
