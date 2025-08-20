@@ -94,5 +94,5 @@ REEL_CLICK_INTERVAL = 0.05                  # 鼠标连点间隔（秒）
 
 # ====== DEBUG调试参数 ======
 DEBUG_ENABLED = True                        # 是否启用调试功能
-DEBUG_SAVE_DETECTION_SCREENSHOT = True      # 是否保存带判定框的检测截图
+DEBUG_SAVE_DETECTION_SCREENSHOT = False     # 是否保存带判定框的检测截图
 DEBUG_SCREENSHOT_PREFIX = "debug_detection"     # 调试截图文件前缀
