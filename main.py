@@ -90,6 +90,7 @@ def monitor_window(hwnd):
             red_start_time = None
             is_pressed = False
             is_rapid_clicking = False  # 新增：标记是否在连点模式
+            rapid_click_count = 0      # 连点计数器，用于控制日志频率
             cycle_active = True
             blue_check_enable = True
             # 新增：A/D 触发状态记录（用于边沿触发日志与锁定切换）
@@ -120,23 +121,32 @@ def monitor_window(hwnd):
                         reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
                         reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
                         
-                        if has_broad_red_in_region(full_img, reel_center, reel_size):
+                        has_red = has_broad_red_in_region(full_img, reel_center, reel_size)
+                        log(f"收鱼线区域红色检测：{reel_center} ({reel_size}x{reel_size}) -> {'有红色' if has_red else '无红色'}")
+                        
+                        if has_red:
                             # 如果检测到红色，使用连点模式
-                            log("检测到收鱼线区域红色，启动鼠标连点模式")
+                            log("【启动连点模式】检测到收鱼线区域红色，开始鼠标连点收线")
                             is_rapid_clicking = True
+                            rapid_click_count = 0
                         else:
                             # 没有红色，使用原来的长按模式
+                            log("【启动长按模式】未检测到红色，使用传统长按收线")
                             press_mouse_window(hwnd, *CLICK_POS)
                             is_pressed = True
                     elif is_rapid_clicking:
                         # 持续连点模式
+                        rapid_click_count += 1
+                        if rapid_click_count % 20 == 1:  # 每20次连点输出一次日志
+                            log(f"【连点进行中】第{rapid_click_count}次连点...")
                         rapid_click_mouse_window(hwnd, *CLICK_POS)
                 else:
                     red_start_time = None
                     # 重置连点状态
                     if is_rapid_clicking:
-                        log("鱼漂状态变化，退出连点模式")
+                        log(f"【退出连点模式】鱼漂状态变化，共连点{rapid_click_count}次")
                         is_rapid_clicking = False
+                        rapid_click_count = 0
 
                 # ------- A/D互斥长按逻辑（新版：左右红橙色检测，锁定-切换） -------
                 if is_pressed:
@@ -213,7 +223,10 @@ def monitor_window(hwnd):
                         log(f"钓鱼完成（成功+1，目前 成功/失败/尝试 = {successes}/{failures}/{attempts}）")
                         release_mouse()
                         is_pressed = False
-                        is_rapid_clicking = False  # 重置连点状态
+                        if is_rapid_clicking:
+                            log(f"【钓鱼完成，退出连点模式】共连点{rapid_click_count}次")
+                            is_rapid_clicking = False  # 重置连点状态
+                            rapid_click_count = 0
                         blue_check_enable = False
                         # ===== 这里是新加的配置延迟 =====
                         time.sleep(AFTER_DETECT_CLICK_DELAY)
@@ -229,8 +242,9 @@ def monitor_window(hwnd):
                 else:
                     # 重置连点状态
                     if is_rapid_clicking:
-                        log("未处于收鱼状态，退出连点模式")
+                        log(f"【退出连点模式】未处于收鱼状态，共连点{rapid_click_count}次")
                         is_rapid_clicking = False
+                        rapid_click_count = 0
                     if last_key[0] == "a":
                         keyboard.release("a")
                         last_key[0] = None

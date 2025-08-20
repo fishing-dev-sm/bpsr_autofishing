@@ -66,7 +66,7 @@ def press_mouse_window(hwnd, rel_x, rel_y):
     abs_y = client_rect[1] + rel_y
     ctypes.windll.user32.SetCursorPos(abs_x, abs_y)
     ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
-    log(f"鼠标左键已按下（窗口内: {rel_x},{rel_y} | 屏幕: {abs_x},{abs_y}）")
+    log(f"【长按模式】鼠标左键已按下（窗口内: {rel_x},{rel_y} | 屏幕: {abs_x},{abs_y}）")
 
 def release_mouse():
     ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
@@ -103,7 +103,7 @@ def rapid_click_mouse_window(hwnd, rel_x, rel_y, interval=REEL_CLICK_INTERVAL):
     import time
     time.sleep(interval)
     ctypes.windll.user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
-    log(f"鼠标连点（窗口内: {rel_x},{rel_y} | 屏幕: {abs_x},{abs_y}）")
+    # 连点日志由main.py控制，这里不输出，避免刷屏
 
 def get_search_region(center, offset):
     """

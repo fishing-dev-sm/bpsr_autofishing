@@ -203,4 +203,8 @@ def has_broad_red_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_TH
     total_pixels = roi.shape[0] * roi.shape[1]
     red_ratio = red_pixels / total_pixels
     
-    return red_ratio >= ratio_threshold
+    # 详细的检测日志
+    result = red_ratio >= ratio_threshold
+    log(f"红色检测详情：区域{roi.shape} 红色像素{red_pixels}/{total_pixels} 比例{red_ratio:.3f} 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
+    
+    return result
