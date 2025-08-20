@@ -145,6 +145,45 @@ def region_rect_major_color(img, rect, color_list, tolerance=20, ratio=0.5):
     proportion = match_cnt / total_cnt
     return proportion >= ratio
 
+def save_debug_detection_image(img, center, size, detected=False):
+    """
+    保存带有检测框的调试截图
+    
+    参数:
+        img: 原始截图
+        center: 检测中心坐标
+        size: 检测区域大小
+        detected: 是否检测到目标
+    """
+    if not DEBUG_ENABLED or not DEBUG_SAVE_DETECTION_SCREENSHOT:
+        return
+    
+    debug_img = img.copy()
+    cx, cy = center
+    half_size = size // 2
+    
+    # 计算检测框坐标
+    x1 = max(0, int(cx - half_size))
+    y1 = max(0, int(cy - half_size))
+    x2 = min(img.shape[1], int(cx + half_size))
+    y2 = min(img.shape[0], int(cy + half_size))
+    
+    # 绘制检测框
+    color = (0, 255, 0) if detected else (0, 0, 255)  # 绿色=检测到，红色=未检测到
+    thickness = 2
+    cv2.rectangle(debug_img, (x1, y1), (x2, y2), color, thickness)
+    
+    # 绘制中心点
+    cv2.circle(debug_img, (int(cx), int(cy)), 3, color, -1)
+    
+    # 添加文字标注
+    text = f"Center:({cx},{cy}) Size:{size}x{size} {'DETECTED' if detected else 'NOT_DETECTED'}"
+    cv2.putText(debug_img, text, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+    
+    # 保存图片
+    cv2.imwrite(DEBUG_SCREENSHOT_PATH, debug_img)
+    log(f"Debug截图已保存到: {DEBUG_SCREENSHOT_PATH} ({'检测到' if detected else '未检测到'})")
+
 def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_THRESHOLD):
     """
     检测指定区域内是否有宽泛的红色或白色出现
@@ -217,5 +256,8 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     # 详细的检测日志
     result = combined_ratio >= ratio_threshold
     log(f"红白检测详情：区域{roi.shape} 红色{red_pixels}({red_ratio:.3f}) 白色{white_pixels}({white_ratio:.3f}) 总计{total_red_white_pixels}/{total_pixels}({combined_ratio:.3f}) 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
+    
+    # 保存debug截图
+    save_debug_detection_image(img, center, size, result)
     
     return result
