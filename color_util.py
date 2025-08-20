@@ -180,9 +180,14 @@ def save_debug_detection_image(img, center, size, detected=False):
     text = f"Center:({cx},{cy}) Size:{size}x{size} {'DETECTED' if detected else 'NOT_DETECTED'}"
     cv2.putText(debug_img, text, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
     
+    # 生成带时间戳的文件名
+    import time
+    timestamp = int(time.time())
+    filename = f"{DEBUG_SCREENSHOT_PREFIX}_{timestamp}_{'detected' if detected else 'not_detected'}.png"
+    
     # 保存图片
-    cv2.imwrite(DEBUG_SCREENSHOT_PATH, debug_img)
-    log(f"Debug截图已保存到: {DEBUG_SCREENSHOT_PATH} ({'检测到' if detected else '未检测到'})")
+    cv2.imwrite(filename, debug_img)
+    log(f"Debug截图已保存到: {filename} ({'检测到' if detected else '未检测到'})")
 
 def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_THRESHOLD):
     """
@@ -218,24 +223,23 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     # 转换为HSV色彩空间进行红色检测
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     
-    # 定义红色的HSV范围（宽泛检测，包含红橙色）
-    # 红色有两个范围：0-10度和160-180度
-    lower_red1 = np.array([0, 50, 50])      # 降低饱和度和明度阈值，更宽泛
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 50, 50])
+    # 定义红色的HSV范围（精确检测，排除橙色）
+    # 红色范围1：0-5度（纯红色，排除橙色）
+    lower_red1 = np.array([0, 100, 100])    # 提高饱和度和明度，更精确
+    upper_red1 = np.array([5, 255, 255])    # 缩小色相范围，排除橙色
+    
+    # 红色范围2：170-180度（深红色）
+    lower_red2 = np.array([170, 100, 100])  # 提高饱和度，缩小范围
     upper_red2 = np.array([180, 255, 255])
     
-    # 橙红色范围（10-25度）
-    lower_orange = np.array([10, 50, 50])
-    upper_orange = np.array([25, 255, 255])
+    # 移除橙色检测，专注于纯红色
     
     # 创建掩码
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask3 = cv2.inRange(hsv, lower_orange, upper_orange)
     
-    # 合并红色掩码
-    red_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask3)
+    # 合并红色掩码（只包含纯红色）
+    red_mask = cv2.bitwise_or(mask1, mask2)
     
     # 白色检测 - 使用多种方法检测白色
     # 方法1：BGR色彩空间，所有通道都高

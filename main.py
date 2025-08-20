@@ -160,11 +160,14 @@ def monitor_window(hwnd):
                         # 继续长按（不需要额外操作）
                 else:
                     red_start_time = None
-                    # 重置连点状态
+                    # 重置连点状态并恢复长按
                     if is_rapid_clicking:
-                        log(f"【退出连点模式】鱼漂状态变化，共连点{rapid_click_count}次")
+                        log(f"【退出连点模式】鱼漂状态变化，共连点{rapid_click_count}次，恢复长按")
                         is_rapid_clicking = False
                         rapid_click_count = 0
+                        # 立即恢复长按模式
+                        press_mouse_window(hwnd, *CLICK_POS)
+                        is_pressed = True
 
                 # ------- A/D互斥长按逻辑（新版：左右红橙色检测，锁定-切换） -------
                 if is_pressed or is_rapid_clicking:
@@ -289,11 +292,14 @@ def monitor_window(hwnd):
                             keyboard.release("d")
                         last_key[0] = None
                 else:
-                    # 重置连点状态
+                    # 重置连点状态并恢复长按
                     if is_rapid_clicking:
-                        log(f"【退出连点模式】未处于收鱼状态，共连点{rapid_click_count}次")
+                        log(f"【退出连点模式】未处于收鱼状态，共连点{rapid_click_count}次，恢复长按")
                         is_rapid_clicking = False
                         rapid_click_count = 0
+                        # 立即恢复长按模式
+                        press_mouse_window(hwnd, *CLICK_POS)
+                        is_pressed = True
                     if last_key[0] == "a":
                         keyboard.release("a")
                         last_key[0] = None
