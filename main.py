@@ -121,17 +121,17 @@ def monitor_window(hwnd):
                         reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
                         reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
                         
-                        has_red = has_broad_red_in_region(full_img, reel_center, reel_size)
-                        log(f"收鱼线区域红色检测：{reel_center} ({reel_size}x{reel_size}) -> {'有红色' if has_red else '无红色'}")
+                        has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                        log(f"收鱼线区域红白检测：{reel_center} ({reel_size}x{reel_size}) -> {'有红色或白色' if has_red_or_white else '无红色或白色'}")
                         
-                        if has_red:
-                            # 如果检测到红色，使用连点模式
-                            log("【启动连点模式】检测到收鱼线区域红色，开始鼠标连点收线")
+                        if has_red_or_white:
+                            # 如果检测到红色或白色，使用连点模式
+                            log("【启动连点模式】检测到收鱼线区域红色或白色，开始鼠标连点收线")
                             is_rapid_clicking = True
                             rapid_click_count = 0
                         else:
-                            # 没有红色，使用原来的长按模式
-                            log("【启动长按模式】未检测到红色，使用传统长按收线")
+                            # 没有红色或白色，使用原来的长按模式
+                            log("【启动长按模式】未检测到红色或白色，使用传统长按收线")
                             press_mouse_window(hwnd, *CLICK_POS)
                             is_pressed = True
                     elif is_rapid_clicking:

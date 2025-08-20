@@ -145,18 +145,18 @@ def region_rect_major_color(img, rect, color_list, tolerance=20, ratio=0.5):
     proportion = match_cnt / total_cnt
     return proportion >= ratio
 
-def has_broad_red_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_THRESHOLD):
+def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_THRESHOLD):
     """
-    检测指定区域内是否有宽泛的红色出现
+    检测指定区域内是否有宽泛的红色或白色出现
     
     参数:
         img: 截图图像（BGR格式）
         center: 检测区域中心坐标 (x, y)
         size: 检测区域边长（正方形）
-        ratio_threshold: 红色像素占比阈值
+        ratio_threshold: 红色/白色像素占比阈值
     
     返回:
-        bool: 是否检测到足够比例的红色
+        bool: 是否检测到足够比例的红色或白色
     """
     if img is None or img.size == 0:
         return False
@@ -195,16 +195,27 @@ def has_broad_red_in_region(img, center, size, ratio_threshold=REEL_RED_RATIO_TH
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask3 = cv2.inRange(hsv, lower_orange, upper_orange)
     
-    # 合并所有掩码
-    combined_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask3)
+    # 合并红色掩码
+    red_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask3)
     
-    # 计算红色像素比例
-    red_pixels = cv2.countNonZero(combined_mask)
+    # 白色检测 - 在BGR色彩空间中检测高亮度像素
+    white_mask = np.all(roi > 200, axis=2).astype(np.uint8) * 255  # 所有通道都大于200被认为是白色
+    
+    # 合并红色和白色掩码
+    combined_mask = cv2.bitwise_or(red_mask, white_mask)
+    
+    # 计算红色和白色像素比例
+    red_pixels = cv2.countNonZero(red_mask)
+    white_pixels = cv2.countNonZero(white_mask)
+    total_red_white_pixels = cv2.countNonZero(combined_mask)
     total_pixels = roi.shape[0] * roi.shape[1]
+    
     red_ratio = red_pixels / total_pixels
+    white_ratio = white_pixels / total_pixels
+    combined_ratio = total_red_white_pixels / total_pixels
     
     # 详细的检测日志
-    result = red_ratio >= ratio_threshold
-    log(f"红色检测详情：区域{roi.shape} 红色像素{red_pixels}/{total_pixels} 比例{red_ratio:.3f} 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
+    result = combined_ratio >= ratio_threshold
+    log(f"红白检测详情：区域{roi.shape} 红色{red_pixels}({red_ratio:.3f}) 白色{white_pixels}({white_ratio:.3f}) 总计{total_red_white_pixels}/{total_pixels}({combined_ratio:.3f}) 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
     
     return result
