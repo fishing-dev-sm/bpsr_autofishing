@@ -20,6 +20,9 @@ def monitor_window(hwnd):
     attempts = 0
     successes = 0
     failures = 0
+    # 新增：红白检测统计
+    red_detections = 0
+    white_detections = 0
     window = get_window_by_hwnd(hwnd)
     if not window:
         log(f"未找到窗口句柄 {hwnd} 对应的窗口")
@@ -119,7 +122,13 @@ def monitor_window(hwnd):
                     # 在整个收鱼过程中持续检测红白色
                     reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
                     reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
-                    has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                    has_red_or_white, detected_red, detected_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                    
+                    # 更新检测统计
+                    if detected_red:
+                        red_detections += 1
+                    if detected_white:
+                        white_detections += 1
                     
                     if not is_pressed and not is_rapid_clicking:
                         # 初始状态：根据检测结果选择模式
@@ -174,7 +183,13 @@ def monitor_window(hwnd):
                     # 在遛鱼过程中持续检测红白色并切换模式
                     reel_center = get_scale_point(REEL_RED_CHECK_CENTER, width, height)
                     reel_size = get_int_scale_val(REEL_RED_CHECK_SIZE, width, height)
-                    has_red_or_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                    has_red_or_white, detected_red, detected_white = has_broad_red_or_white_in_region(full_img, reel_center, reel_size)
+                    
+                    # 更新检测统计
+                    if detected_red:
+                        red_detections += 1
+                    if detected_white:
+                        white_detections += 1
                     
                     # 处理模式切换
                     if is_pressed and has_red_or_white:
@@ -326,6 +341,7 @@ def monitor_window(hwnd):
         log(f"时间区间：{session_start_str}  →  {session_end_str}  （{hours:02d}:{minutes:02d}:{seconds:02d}）")
         log(f"结果：成功 {successes}，失败 {failures}，尝试 {attempts}，成功率 {success_rate:.2f}%")
         log(f"单位时间效率：{per_min:.2f} 成功/分钟，{per_hour:.2f} 成功/小时")
+        log(f"颜色检测：检测到红色 {red_detections} 次，检测到白色 {white_detections} 次")
         log("===========================================")
         release_mouse()
         if last_key[0] == "a":

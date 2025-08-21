@@ -273,6 +273,9 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     
     # 详细的检测日志
     result = combined_ratio >= ratio_threshold
+    has_red = red_ratio >= ratio_threshold
+    has_white = white_ratio >= ratio_threshold
     log(f"红白检测详情：区域{roi.shape} 红色{red_pixels}({red_ratio:.3f}) 白色{white_pixels}({white_ratio:.3f}) 总计{total_red_white_pixels}/{total_pixels}({combined_ratio:.3f}) 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
     
-    return result
+    # 返回详细检测结果
+    return result, has_red, has_white
