@@ -223,16 +223,16 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     # 转换为HSV色彩空间进行红色检测
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     
-    # 定义红色的HSV范围（精确检测，排除橙色）
-    # 红色范围1：0-5度（纯红色，排除橙色）
-    lower_red1 = np.array([0, 100, 100])    # 提高饱和度和明度，更精确
-    upper_red1 = np.array([5, 255, 255])    # 缩小色相范围，排除橙色
+    # 定义红色的HSV范围（适度宽泛，确保能检测到红色）
+    # 红色范围1：0-10度（包含一些橙红色，提高检测率）
+    lower_red1 = np.array([0, 50, 50])      # 降低饱和度和明度阈值，提高检测率
+    upper_red1 = np.array([10, 255, 255])   # 稍微扩大色相范围
     
-    # 红色范围2：170-180度（深红色）
-    lower_red2 = np.array([170, 100, 100])  # 提高饱和度，缩小范围
+    # 红色范围2：160-180度（深红色）
+    lower_red2 = np.array([160, 50, 50])    # 降低饱和度阈值，扩大检测范围
     upper_red2 = np.array([180, 255, 255])
     
-    # 移除橙色检测，专注于纯红色
+    # 适度包含红橙色以提高检测率
     
     # 创建掩码
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
@@ -251,8 +251,8 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     color_distance = np.sqrt(np.sum(diff**2, axis=2))
     white_bgr_precise = color_distance < REEL_WHITE_COLOR_TOLERANCE
     
-    # 方法2：HSV色彩空间，极低饱和度高明度（针对白色调整）
-    white_hsv_mask = cv2.inRange(hsv, np.array([0, 0, 240]), np.array([180, 15, 255]))
+    # 方法2：HSV色彩空间，低饱和度高明度（更宽松的白色检测）
+    white_hsv_mask = cv2.inRange(hsv, np.array([0, 0, 200]), np.array([180, 30, 255]))
     
     # 合并两种白色检测方法（提高精确度）
     white_condition = np.logical_or(white_bgr_precise, white_hsv_mask > 0)
