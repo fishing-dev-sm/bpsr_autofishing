@@ -273,9 +273,26 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     
     # 详细的检测日志
     result = combined_ratio >= ratio_threshold
-    has_red = red_ratio >= ratio_threshold
-    has_white = white_ratio >= ratio_threshold
-    log(f"红白检测详情：区域{roi.shape} 红色{red_pixels}({red_ratio:.3f}) 白色{white_pixels}({white_ratio:.3f}) 总计{total_red_white_pixels}/{total_pixels}({combined_ratio:.3f}) 阈值{ratio_threshold:.3f} -> {'检测到' if result else '未检测到'}")
+    
+    # 修正红色和白色的检测逻辑：红色和白色是交替出现的，分别独立检测
+    # 降低单独检测阈值，因为红色通常像素较少
+    red_threshold = ratio_threshold * 0.3   # 红色阈值0.3%，因为红色通常较少
+    white_threshold = ratio_threshold * 0.3 # 白色阈值0.3%
+    
+    # 独立检测红色和白色，任一检测到都算有效
+    has_red = red_ratio >= red_threshold
+    has_white = white_ratio >= white_threshold
+    
+    # 总体检测结果：红色或白色任一检测到即为真
+    result = has_red or has_white
+    
+    detection_msg = []
+    if has_red:
+        detection_msg.append("红色")
+    if has_white:
+        detection_msg.append("白色")
+    
+    log(f"红白检测详情：区域{roi.shape} 红色{red_pixels}({red_ratio:.3f},阈值{red_threshold:.3f}) 白色{white_pixels}({white_ratio:.3f},阈值{white_threshold:.3f}) -> 检测到{'/'.join(detection_msg) if detection_msg else '无'}")
     
     # 返回详细检测结果
     return result, has_red, has_white
