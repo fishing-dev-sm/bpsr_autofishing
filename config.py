@@ -91,6 +91,8 @@ REEL_RED_CHECK_CENTER = (1236, 898)    # 收鱼线红白检测区域中心（基
 REEL_RED_CHECK_SIZE = 30                    # 检测区域大小（30x30像素）
 REEL_RED_RATIO_THRESHOLD = 0.02             # 红色/白色像素占比阈值（宽泛检测）
 REEL_CLICK_INTERVAL = 0.05                  # 鼠标连点间隔（秒）
+REEL_WHITE_COLOR_TARGET = (253, 246, 246)   # 目标白色RGB值（基于实际截图#fdf6f6）
+REEL_WHITE_COLOR_TOLERANCE = 15             # 白色检测容差（RGB颜色距离）
 
 # ====== DEBUG调试参数 ======
 DEBUG_ENABLED = True                        # 是否启用调试功能

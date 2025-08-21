@@ -241,15 +241,21 @@ def has_broad_red_or_white_in_region(img, center, size, ratio_threshold=REEL_RED
     # 合并红色掩码（只包含纯红色）
     red_mask = cv2.bitwise_or(mask1, mask2)
     
-    # 白色检测 - 使用多种方法检测白色
-    # 方法1：BGR色彩空间，所有通道都高
-    white_bgr = np.all(roi > 180, axis=2)
+    # 白色检测 - 基于实际白色值#fdf6f6进行精确检测
+    target_white_rgb = np.array(REEL_WHITE_COLOR_TARGET)  # RGB格式的目标白色
+    target_white_bgr = target_white_rgb[::-1]  # 转换为BGR格式
     
-    # 方法2：HSV色彩空间，低饱和度高明度（更准确的白色检测）
-    white_hsv_mask = cv2.inRange(hsv, np.array([0, 0, 180]), np.array([180, 50, 255]))
+    # 方法1：基于目标白色的RGB距离检测（更精确）
+    # 计算每个像素与目标白色的欧几里得距离
+    diff = np.abs(roi.astype(np.float32) - target_white_bgr.astype(np.float32))
+    color_distance = np.sqrt(np.sum(diff**2, axis=2))
+    white_bgr_precise = color_distance < REEL_WHITE_COLOR_TOLERANCE
     
-    # 合并两种白色检测方法
-    white_condition = np.logical_or(white_bgr, white_hsv_mask > 0)
+    # 方法2：HSV色彩空间，极低饱和度高明度（针对白色调整）
+    white_hsv_mask = cv2.inRange(hsv, np.array([0, 0, 240]), np.array([180, 15, 255]))
+    
+    # 合并两种白色检测方法（提高精确度）
+    white_condition = np.logical_or(white_bgr_precise, white_hsv_mask > 0)
     white_mask = white_condition.astype(np.uint8) * 255
     
     # 合并红色和白色掩码
