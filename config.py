@@ -98,3 +98,9 @@ REEL_WHITE_COLOR_TOLERANCE = 25             # 白色检测容差（RGB颜色距�
 DEBUG_ENABLED = True                        # 是否启用调试功能
 DEBUG_SAVE_DETECTION_SCREENSHOT = False     # 是否保存带判定框的检测截图
 DEBUG_SCREENSHOT_PREFIX = "debug_detection"     # 调试截图文件前缀
+
+# ====== 超时保护参数 ======
+STAGE_TIMEOUT = 120                         # 每个阶段的最大超时时间（秒）
+TIMEOUT_CHECK_INTERVAL = 1.0                # 超时检查间隔（秒）
+TIMEOUT_RECOVERY_ATTEMPTS = 3               # 超时恢复尝试次数
+TIMEOUT_RECOVERY_DELAY = 2.0                # 超时恢复操作间隔（秒）

@@ -30,6 +30,11 @@
     - A 触发后持续按 A，仅当 D 触发才切到 D；反之亦然；
     - 触发消失不会松键；同时触发保持当前方向；无方向则不按；
   - 每次触发、按下、释放都会输出日志。
+- **超时保护系统（新功能）**：
+  - 每个阶段都有120秒超时保护，防止程序卡死
+  - 自动检测卡死情况：钓鱼成功结算界面、鱼跑了界面、其他异常界面
+  - 智能恢复机制：尝试点击钓鱼按钮、完成按钮、检查鱼竿耐久等
+  - 多层恢复策略：从简单操作到复杂操作，逐步尝试恢复
 - 自动换竿：检测右下区域"添加鱼竿"按钮，通过按键+两次点击自动更换。
 - Debug调试：可开启截图功能验证检测区域位置，支持动态开关。
 - 会话统计：程序结束打印时间区间、成功率、单位时间效率（成功/分钟、成功/小时）。
@@ -80,6 +85,11 @@ python main.py
   - `REEL_RED_CHECK_SIZE=30`：检测区域大小（30×30像素）
   - `REEL_RED_RATIO_THRESHOLD=0.02`：红白像素占比阈值（2%）
   - `REEL_CLICK_INTERVAL=0.05`：连点模式点击间隔（0.05秒）
+- **超时保护配置**：
+  - `STAGE_TIMEOUT=120`：每个阶段的最大超时时间（秒）
+  - `TIMEOUT_CHECK_INTERVAL=1.0`：超时检查间隔（秒）
+  - `TIMEOUT_RECOVERY_ATTEMPTS=3`：超时恢复尝试次数
+  - `TIMEOUT_RECOVERY_DELAY=2.0`：超时恢复操作间隔（秒）
 - **Debug调试配置**：
   - `DEBUG_ENABLED=True`：是否启用调试功能
   - `DEBUG_SAVE_DETECTION_SCREENSHOT=False`：是否保存检测截图
@@ -98,6 +108,10 @@ python main.py
   - 橙色被误判为红色：检查颜色检测范围，确保HSV红色范围正确设置
   - 连点频率太快/太慢：调整 `REEL_CLICK_INTERVAL` 值
 - 运行报缺依赖：确保 `pip install -r requirements.txt` 成功，并在 Windows 环境运行。
+- **超时保护相关问题**：
+  - 程序频繁超时：检查网络延迟或游戏响应速度，可适当增加 `STAGE_TIMEOUT` 值
+  - 超时恢复失败：检查游戏界面是否异常，可增加 `TIMEOUT_RECOVERY_ATTEMPTS` 尝试次数
+  - 超时检测过于频繁：可增加 `TIMEOUT_CHECK_INTERVAL` 值减少检查频率
 
 ### 使用技巧
 - **调试模式**：首次使用建议开启 `DEBUG_SAVE_DETECTION_SCREENSHOT=True`，观察检测框是否在正确位置

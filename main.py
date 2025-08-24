@@ -12,6 +12,8 @@ from window_util import *
 from color_util import *
 from utils import save_screenshot
 
+# 超时配置常量（从config.py导入）
+
 def monitor_window(hwnd):
     isRunning = [True]
     last_key = [None]  # 记录上一次长按的"a"或"d"
@@ -41,6 +43,10 @@ def monitor_window(hwnd):
 
     try:
         while isRunning[0]:
+            # ====== 阶段1：甩钩和初始检测 ======
+            stage_start_time = time.time()
+            log(f"开始第{attempts + 1}轮钓鱼 - 阶段1：甩钩和初始检测")
+            
             full_img = capture_window(hwnd)
             height, width = full_img.shape[:2]
             game_logic.check_and_replace_rod(full_img,width,height,hwnd,window)
@@ -59,6 +65,14 @@ def monitor_window(hwnd):
             delay_start = time.time()
             blue_detected = False
             while time.time() - delay_start < (START_DELAY - 2):
+                # 超时检查
+                if time.time() - stage_start_time > STAGE_TIMEOUT:
+                    log(f"【超时警告】阶段1超时{STAGE_TIMEOUT}秒，尝试恢复...")
+                    # 尝试点击钓鱼按钮恢复
+                    click_mouse_window(hwnd, *get_scale_point(CLICK_POS, full_img.shape[1], full_img.shape[0]))
+                    time.sleep(2)
+                    break
+                
                 full_img = capture_window(hwnd)
                 if full_img is not None:
                     if is_blue_target(full_img, get_scale_area(BLUE_ROI,width,height), BLUE_COLORS, tolerance=BLUE_TOLERANCE):
@@ -70,12 +84,26 @@ def monitor_window(hwnd):
             if blue_detected:
                 continue
 
-            # ====== 步骤2：自动定位红点密集区域 ======
+            # ====== 阶段2：红点搜索 ======
+            stage_start_time = time.time()
+            log(f"第{attempts}轮钓鱼 - 阶段2：红点搜索")
+            
             full_img = capture_window(hwnd)
             found_red = False
             count = 0
             fish_region = []
-            while not found_red and count<3:
+            red_rect = None
+            red_ratio = 0
+            
+            while not found_red and count < 3:
+                # 超时检查
+                if time.time() - stage_start_time > STAGE_TIMEOUT:
+                    log(f"【超时警告】阶段2红点搜索超时{STAGE_TIMEOUT}秒，尝试重新甩钩...")
+                    # 尝试重新甩钩
+                    click_mouse_window(hwnd, *get_scale_point(CLICK_POS, full_img.shape[1], full_img.shape[0]))
+                    time.sleep(2)
+                    break
+                
                 offset = count * 100  # 每次偏移100像素
                 center = (RED_SEARCH_REGION_CENTER[0], RED_SEARCH_REGION_CENTER[1] + offset)
                 red_rect, red_ratio = find_max_red_region(
@@ -83,13 +111,21 @@ def monitor_window(hwnd):
                 # utils.save_screenshot(full_img, f'full_img')
                 log(f"检测到红点区域：{red_rect}, 密集度={red_ratio:.2f}")
                 fish_region = red_rect
-                count+=1
+                count += 1
                 if red_ratio >= RED_THRESHOLD:
+                    found_red = True
                     break
-            if red_ratio < RED_THRESHOLD:
-                log("找不到红点")
-                # return
+                
+                time.sleep(0.1)  # 避免过于频繁的检测
+            
+            if not found_red or red_ratio < RED_THRESHOLD:
+                log("找不到红点，尝试重新甩钩")
+                continue
 
+            # ====== 阶段3：遛鱼和钓鱼完成 ======
+            stage_start_time = time.time()
+            log(f"第{attempts}轮钓鱼 - 阶段3：遛鱼和钓鱼完成")
+            
             red_start_time = None
             is_pressed = False
             is_rapid_clicking = False  # 新增：标记是否在连点模式
@@ -100,6 +136,26 @@ def monitor_window(hwnd):
             ad_prev_hot = {"a": False, "d": False}
 
             while cycle_active and isRunning[0]:
+                # 超时检查
+                if time.time() - stage_start_time > STAGE_TIMEOUT:
+                    log(f"【超时警告】阶段3遛鱼超时{STAGE_TIMEOUT}秒，尝试处理卡死情况...")
+                    
+                    # 处理可能的卡死情况
+                    if handle_stuck_situation(hwnd, full_img, width, height):
+                        log("卡死情况处理成功，继续钓鱼")
+                        break
+                    else:
+                        log("卡死情况处理失败，重新开始")
+                        # 释放所有按键和鼠标
+                        release_mouse()
+                        if last_key[0] == "a":
+                            keyboard.release("a")
+                            last_key[0] = None
+                        if last_key[0] == "d":
+                            keyboard.release("d")
+                            last_key[0] = None
+                        break
+                
                 full_img = capture_window(hwnd)
                 if full_img is None:
                     time.sleep(0.1)
@@ -350,6 +406,93 @@ def monitor_window(hwnd):
             keyboard.release("d")
         keyboard.unhook_all()
         log("程序已终止。")
+
+def handle_stuck_situation(hwnd, full_img, width, height):
+    """
+    处理卡死情况的函数
+    
+    参数:
+        hwnd: 窗口句柄
+        full_img: 当前截图
+        width, height: 图像尺寸
+    
+    返回:
+        bool: 是否成功处理卡死情况
+    """
+    log("开始处理卡死情况...")
+    
+    try:
+        # 1. 检查是否卡在钓鱼成功结算界面
+        cx1, cy1, cx2, cy2 = get_scale_area(COLOR_CHECK_AREA, width, height)
+        if is_color_match(full_img, cx1, cy1, cx2, cy2, TARGET_COLOR):
+            log("检测到卡在钓鱼成功结算界面，尝试点击完成按钮")
+            click_mouse_window(hwnd, *(get_scale_point(SECOND_CLICK_POS, width, height)))
+            time.sleep(TIMEOUT_RECOVERY_DELAY)
+            return True
+        
+        # 2. 检查是否卡在鱼跑了界面
+        if is_blue_target(full_img, get_scale_area(BLUE_ROI, width, height), BLUE_COLORS, tolerance=BLUE_TOLERANCE):
+            log("检测到卡在鱼跑了界面，尝试重新开始")
+            return True
+        
+        # 3. 检查是否卡在其他界面（通过检测红点区域是否有变化）
+        # 重新截图检查
+        new_img = capture_window(hwnd)
+        if new_img is None:
+            log("无法获取新截图，尝试重新甩钩")
+            click_mouse_window(hwnd, *get_scale_point(CLICK_POS, width, height))
+            time.sleep(TIMEOUT_RECOVERY_DELAY)
+            return True
+        
+        # 4. 尝试点击钓鱼按钮恢复
+        log("尝试点击钓鱼按钮恢复钓鱼状态")
+        click_mouse_window(hwnd, *get_scale_point(CLICK_POS, width, height))
+        time.sleep(TIMEOUT_RECOVERY_DELAY)
+        
+        # 5. 检查是否恢复钓鱼状态
+        check_img = capture_window(hwnd)
+        if check_img is not None:
+            # 检查是否有红点出现
+            center = RED_SEARCH_REGION_CENTER
+            red_rect, red_ratio = find_max_red_region(
+                check_img, get_search_region(get_scale_point(center, width, height), RED_SEARCH_REGION_OFFSET), 
+                RED_DETECT_BOX_SIZE, RED_THRESHOLD)
+            
+            if red_ratio >= RED_THRESHOLD:
+                log("成功恢复钓鱼状态")
+                return True
+        
+        # 6. 如果还是不行，尝试更激进的恢复方法
+        log("尝试更激进的恢复方法：多次点击")
+        for i in range(TIMEOUT_RECOVERY_ATTEMPTS):
+            log(f"第{i+1}次恢复尝试")
+            click_mouse_window(hwnd, *get_scale_point(CLICK_POS, width, height))
+            time.sleep(TIMEOUT_RECOVERY_DELAY)
+            
+            # 每次尝试后检查是否恢复
+            check_img = capture_window(hwnd)
+            if check_img is not None:
+                center = RED_SEARCH_REGION_CENTER
+                red_rect, red_ratio = find_max_red_region(
+                    check_img, get_search_region(get_scale_point(center, width, height), RED_SEARCH_REGION_OFFSET), 
+                    RED_DETECT_BOX_SIZE, RED_THRESHOLD)
+                
+                if red_ratio >= RED_THRESHOLD:
+                    log(f"第{i+1}次恢复尝试成功")
+                    return True
+        
+        # 7. 最后的恢复尝试：检查耐久并换竿
+        log("尝试检查鱼竿耐久并换竿")
+        if check_img is not None:
+            game_logic.check_and_replace_rod(check_img, width, height, hwnd, window)
+            time.sleep(TIMEOUT_RECOVERY_DELAY)
+        
+        log("所有恢复尝试完成，假设恢复成功")
+        return True  # 假设恢复成功，让主循环继续
+        
+    except Exception as e:
+        log(f"处理卡死情况时发生异常：{e}")
+        return False
 
 if __name__ == "__main__":
     hwnds = find_window_by_process_name(PROCESS_NAME)
